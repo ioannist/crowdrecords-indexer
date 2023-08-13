@@ -62,7 +62,7 @@ const eventData: {
           transactionId: 'trx1',
           eventName: 'ContributionCreated',
           eventData: JSON.stringify({
-            contributionId: 2,
+            contributionId: 1,
             tracks: [1, 2],
             title: 'test',
             creationDate: new Date().getTime(),
@@ -87,7 +87,7 @@ const eventData: {
           transactionId: 'trx1',
           eventName: 'ContributionCreated',
           eventData: JSON.stringify({
-            contributionId: 3,
+            contributionId: 2,
             tracks: [3, 4],
             title: 'test',
             creationDate: new Date().getTime(),
@@ -143,6 +143,46 @@ const eventData: {
           }),
           blockNumber: 1,
           eventIndex: 5,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewTokenCreated',
+          eventData: JSON.stringify({
+            recordId: 1,
+            symbol: 'NEW-token',
+            image: 'image.com',
+            creationDate: new Date().getTime(),
+            tokenAmount: 1000000,
+            tokenId: 2,
+            tokenType: 1,
+          }),
+          blockNumber: 1,
+          eventIndex: 6,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewTokenCreated',
+          eventData: JSON.stringify({
+            recordId: 1,
+            symbol: 'NEW-token-COPY',
+            image: 'image.com',
+            creationDate: new Date().getTime(),
+            tokenAmount: 1000000,
+            tokenId: 3,
+            tokenType: 0,
+          }),
+          blockNumber: 1,
+          eventIndex: 7,
         },
       },
     },
@@ -258,7 +298,7 @@ const eventData: {
             previewFile: 'previewFile',
             previewFileHash: 'previewFileHash',
             recordId: 1,
-            seedContribution: true,
+            seedContribution: false,
             roughMix: false,
             status: 2,
             description: 'description',
@@ -323,6 +363,128 @@ const eventData: {
             minTurnOut: false,
           }),
           blockNumber: 3,
+          eventIndex: 3,
+        },
+      },
+    },
+    // *------*------*-------*
+    // *------*---This flow is for the new Agreement, expecting rejection---*-------*
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'AgreementCreated',
+          eventData: JSON.stringify({
+            requester: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+            title: 'Agreement title',
+            recordId: 1,
+            agreementId: 1,
+            ballotId: 1,
+            tokenId: 2,
+            contractLink: 'asdasd',
+            contractHash: 'asdas',
+            creationDate: new Date().getTime(),
+            isPresent: true,
+            depositAmount: 10000000,
+            votingEndBlock: 456,
+          }),
+          blockNumber: 4,
+          eventIndex: 1,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'AgreementVoting',
+          eventData: JSON.stringify({
+            voter: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+            agreementId: 1,
+            ballotId: 1,
+            vote: true,
+          }),
+          blockNumber: 4,
+          eventIndex: 2,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'AgreementBallotResult',
+          eventData: JSON.stringify({
+            agreementId: 1,
+            ballotId: 1,
+            result: true,
+            minTurnOut: true,
+          }),
+          blockNumber: 4,
+          eventIndex: 3,
+        },
+      },
+    },
+    // *------*------*-------*
+    // // *------*---This flow is for the new Agreement, expecting Acceptance---*-------*
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'AgreementCreated',
+          eventData: JSON.stringify({
+            requester: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+            title: 'Agreement title',
+            recordId: 1,
+            agreementId: 2,
+            ballotId: 2,
+            tokenId: 2,
+            contractLink: 'asdasd',
+            contractHash: 'asdas',
+            creationDate: new Date().getTime(),
+            isPresent: true,
+            depositAmount: 10000000,
+            votingEndBlock: 666,
+          }),
+          blockNumber: 5,
+          eventIndex: 1,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'AgreementVoting',
+          eventData: JSON.stringify({
+            voter: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+            agreementId: 2,
+            ballotId: 2,
+            vote: false,
+          }),
+          blockNumber: 5,
+          eventIndex: 2,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'AgreementBallotResult',
+          eventData: JSON.stringify({
+            agreementId: 2,
+            ballotId: 2,
+            result: true,
+            minTurnOut: true,
+          }),
+          blockNumber: 5,
           eventIndex: 3,
         },
       },

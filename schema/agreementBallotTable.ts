@@ -3,7 +3,7 @@ import { createTableIfNotExists } from '../db/dynamoClient';
 
 const createAgreementBallotTable = async () => {
   const params = {
-    TableName: TABLES.CONTRIBUTION_BALLOT_TABLE,
+    TableName: TABLES.AGREEMENTS_BALLOT_TABLE,
     KeySchema: [{ AttributeName: 'ballotId', KeyType: 'HASH' }],
     AttributeDefinitions: [
       { AttributeName: 'ballotId', AttributeType: 'N' },
@@ -23,7 +23,7 @@ const createAgreementBallotTable = async () => {
     ],
   };
 
-  await createTableIfNotExists(TABLES.CONTRIBUTION_BALLOT_TABLE, params);
+  await createTableIfNotExists(TABLES.AGREEMENTS_BALLOT_TABLE, params);
 };
 
 export default createAgreementBallotTable;

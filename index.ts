@@ -43,6 +43,7 @@ import createAgreementsTable from './schema/agreementTable';
 import createContributionVotesTable from './schema/contributionVotesTable';
 import createAgreementBallotTable from './schema/agreementBallotTable';
 import createAgreementVotesTable from './schema/agreementVotesTable';
+import createTokenDataTable from './schema/tokenDataTable';
 
 const ddbClient = new DynamoDBClient({
   region: 'us-east-2',
@@ -72,24 +73,6 @@ const index = async () => {
     }
   }
 };
-
-// function putData(tableName: string, record: any): Promise<ServiceOutputTypes> {
-//   const params = {
-//     TableName: tableName,
-//     Item: marshall(record),
-//   };
-
-//   const command = new PutItemCommand(params);
-//   return ddbClient.send(command);
-// }
-
-// function updateData(
-//   param: UpdateItemCommandInput
-// ): Promise<ServiceOutputTypes> {
-//   const command = new UpdateItemCommand(param);
-
-//   return ddbClient.send(command);
-// }
 
 const getEventAndBlockCheckExpression = () => {
   return `#block < :newBlock OR (#block = :newBlock AND #eventIndex < :newEventIndex) OR (attribute_not_exists(#block) AND attribute_not_exists(#eventIndex))`;
@@ -154,7 +137,11 @@ async function processData(data: DBRecord) {
           };
 
           await putData(TABLES.RECORDS_TABLES, tableData);
-          await updateData(params);
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
         }
         break;
       case 'NewTokenCreated':
@@ -167,7 +154,10 @@ async function processData(data: DBRecord) {
             symbol: tokenData.symbol,
             image: tokenData.image,
             creationDate: tokenData.creationDate,
-            tokenType: tokenData.tokenType,
+            tokenType:
+              tokenData.tokenType === TOKEN_TYPE.GOVERNANCE
+                ? 'GOVERNANCE'
+                : 'COPYRIGHT',
           };
           await putData(TABLES.TOKEN_DATA_TABLE, tokenDataEntry);
 
@@ -182,13 +172,17 @@ async function processData(data: DBRecord) {
                   ? 'governanceTokenId'
                   : 'communityTokenId',
             },
-            ExpressionAttributeValues: {
-              ':n': { S: tokenData.tokenAmount.toString() },
-            },
+            ExpressionAttributeValues: marshall({
+              ':n': tokenData.tokenId,
+            }),
             UpdateExpression: 'SET #N = :n',
           };
 
-          await updateData(params);
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
         }
         break;
       case 'TracksCreated':
@@ -227,7 +221,11 @@ async function processData(data: DBRecord) {
             ReturnValues: 'UPDATED_NEW',
           };
 
-          await updateData(params);
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
         }
         break;
       case 'ContributionCreated':
@@ -275,7 +273,11 @@ async function processData(data: DBRecord) {
               ReturnValues: 'UPDATED_NEW',
             };
 
-            await updateData(params);
+            try {
+              await updateData(params);
+            } catch (err: any) {
+              checkError(err);
+            }
 
             // Changing the count of the accepted contribution counter
             const updateRecordData: UpdateItemCommandInput = {
@@ -296,7 +298,11 @@ async function processData(data: DBRecord) {
               ReturnValues: 'UPDATED_NEW',
             };
 
-            await updateData(updateRecordData);
+            try {
+              await updateData(updateRecordData);
+            } catch (err: any) {
+              checkError(err);
+            }
           } else {
             // The contribution is not seed so it's new contribution
             const params: UpdateItemCommandInput = {
@@ -317,7 +323,11 @@ async function processData(data: DBRecord) {
               ReturnValues: 'UPDATED_NEW',
             };
 
-            await updateData(params);
+            try {
+              await updateData(params);
+            } catch (err: any) {
+              checkError(err);
+            }
 
             // Changing the count of the pending contribution counter
             const updateRecordData: UpdateItemCommandInput = {
@@ -338,7 +348,11 @@ async function processData(data: DBRecord) {
               ReturnValues: 'UPDATED_NEW',
             };
 
-            await updateData(updateRecordData);
+            try {
+              await updateData(updateRecordData);
+            } catch (err: any) {
+              checkError(err);
+            }
           }
         }
         break;
@@ -420,7 +434,11 @@ async function processData(data: DBRecord) {
             ReturnValues: 'UPDATED_NEW',
           };
 
-          await updateData(updateRecordData);
+          try {
+            await updateData(updateRecordData);
+          } catch (err: any) {
+            checkError(err);
+          }
         }
         break;
       case 'ContributionBallotResult':
@@ -447,7 +465,11 @@ async function processData(data: DBRecord) {
             ReturnValues: 'UPDATED_NEW',
           };
 
-          await updateData(updateBallotData);
+          try {
+            await updateData(updateBallotData);
+          } catch (err: any) {
+            checkError(err);
+          }
 
           const queryCommand: QueryCommandInput = {
             TableName: TABLES.CONTRIBUTION_TABLE,
@@ -476,10 +498,6 @@ async function processData(data: DBRecord) {
                     '#rejectedContributionCount': 'rejectedContributionCount',
                   };
 
-            console.log(
-              '🚀 ~ file: index.ts:480 ~ processData ~  ballotResult.result:',
-              ballotResult.result
-            );
             const expressionAttrValue: { [string: string]: number } =
               ballotResult.result
                 ? {
@@ -513,11 +531,11 @@ async function processData(data: DBRecord) {
               UpdateExpression: `ADD #pendingContributionCount :dec, ${updateExpression} ${setEventAndBlockExxpression()}`,
               ReturnValues: 'UPDATED_NEW',
             };
-            console.log(
-              '🚀 ~ file: index.ts:515 ~ processData ~ updateRecordData:',
-              updateRecordData
-            );
-            await updateData(updateRecordData);
+            try {
+              await updateData(updateRecordData);
+            } catch (err: any) {
+              checkError(err);
+            }
           } else {
             console.error(
               'Error: Found ContributionBallotResult event but no contribution found. BallotId = ',
@@ -529,6 +547,7 @@ async function processData(data: DBRecord) {
       //---------------------------------*** 2***------------------------------------------//
       case 'AgreementCreated':
         {
+          //Insert the data into the agreements table
           const agreementCreated: AgreementCreated = JSON.parse(data.eventData);
 
           const agreementEntry = {
@@ -537,15 +556,26 @@ async function processData(data: DBRecord) {
             recordId: agreementCreated.recordId,
             ballotId: agreementCreated.ballotId,
             title: agreementCreated.title,
-            tokenId: agreementCreated.tokenId,
             contractLink: agreementCreated.contractLink,
             contractHash: agreementCreated.contractHash,
+            creationDate: agreementCreated.creationDate,
+          };
+
+          await putData(TABLES.AGREEMENTS_TABLE, agreementEntry);
+
+          //Insert the data into the agreements ballot table
+          const agreementBallotEntry = {
+            ballotId: agreementCreated.ballotId,
+            agreementId: agreementCreated.agreementId,
+            owner: agreementCreated.requester,
+            recordId: agreementCreated.recordId,
+            tokenId: agreementCreated.tokenId,
             creationDate: agreementCreated.creationDate,
             depositAmount: agreementCreated.depositAmount,
             votingEndBlock: agreementCreated.votingEndBlock,
           };
 
-          await putData(TABLES.AGREEMENTS_BALLOT_TABLE, agreementEntry);
+          await putData(TABLES.AGREEMENTS_BALLOT_TABLE, agreementBallotEntry);
 
           const params: UpdateItemCommandInput = {
             TableName: TABLES.GLOBAL_COUNTER_TABLE,
@@ -565,7 +595,11 @@ async function processData(data: DBRecord) {
             ReturnValues: 'UPDATED_NEW',
           };
 
-          await updateData(params);
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
 
           const updateRecordData: UpdateItemCommandInput = {
             TableName: TABLES.RECORDS_TABLES,
@@ -585,7 +619,11 @@ async function processData(data: DBRecord) {
             ReturnValues: 'UPDATED_NEW',
           };
 
-          await updateData(updateRecordData);
+          try {
+            await updateData(updateRecordData);
+          } catch (err: any) {
+            checkError(err);
+          }
         }
         break;
       case 'AgreementVoting':
@@ -602,7 +640,7 @@ async function processData(data: DBRecord) {
           await putData(TABLES.AGREEMENTS_VOTE_TABLE, newVoteEntry);
         }
         break;
-      case 'ContributionBallotResult':
+      case 'AgreementBallotResult':
         {
           const ballotResult: AgreementBallotResult = JSON.parse(
             data.eventData
@@ -626,43 +664,113 @@ async function processData(data: DBRecord) {
             ReturnValues: 'UPDATED_NEW',
           };
 
-          await updateData(updateBallotData);
+          try {
+            await updateData(updateBallotData);
+          } catch (err: any) {
+            checkError(err);
+          }
+
+          const queryCommand: QueryCommandInput = {
+            TableName: TABLES.AGREEMENTS_BALLOT_TABLE,
+            KeyConditionExpression: '#ballotId = :ballotId',
+            ExpressionAttributeNames: {
+              '#ballotId': 'ballotId',
+            },
+            ExpressionAttributeValues: marshall({
+              ':ballotId': ballotResult.ballotId,
+            }),
+          };
+
+          const agreementBallotQueryRes = await queryData(queryCommand);
+
+          const agreementBallot = agreementBallotQueryRes.Items?.map((item) => {
+            return unmarshall(item);
+          })[0];
+
+          if (agreementBallot) {
+            const expressionAttrName: { [string: string]: string } =
+              ballotResult.result
+                ? {
+                    '#acceptedAgreementCount': 'acceptedAgreementCount',
+                  }
+                : {
+                    '#rejectedAgreementCount': 'rejectedAgreementCount',
+                  };
+
+            const expressionAttrValue: { [string: string]: number } =
+              ballotResult.result
+                ? {
+                    ':acceptedAgreementCount': 1,
+                  }
+                : {
+                    ':rejectedAgreementCount': 1,
+                  };
+
+            const updateExpression: string = ballotResult.result
+              ? '#acceptedAgreementCount :acceptedAgreementCount'
+              : '#rejectedAgreementCount :rejectedAgreementCount';
+
+            // Changing the count of the pending contribution counter
+            const updateRecordData: UpdateItemCommandInput = {
+              TableName: TABLES.RECORDS_TABLES,
+              Key: marshall({
+                recordId: agreementBallot.recordId,
+              }),
+              ExpressionAttributeNames: {
+                '#pendingAgreementCount': 'pendingAgreementCount',
+                ...expressionAttrName,
+                ...getBlockAttributeNames(),
+              },
+              ExpressionAttributeValues: marshall({
+                ':dec': -1,
+                ...expressionAttrValue,
+                ...getBlockAttributeValues(blockNumber, eventIndex),
+              }),
+              ConditionExpression: getEventAndBlockCheckExpression(),
+              UpdateExpression: `ADD #pendingAgreementCount :dec, ${updateExpression} ${setEventAndBlockExxpression()}`,
+              ReturnValues: 'UPDATED_NEW',
+            };
+            try {
+              await updateData(updateRecordData);
+            } catch (err: any) {
+              checkError(err);
+            }
+          } else {
+            console.error(
+              `Error: Found AgreementBallotResult event but no Agreement Ballot found. BallotId : ${ballotResult.ballotId} agreementId : ${ballotResult.agreementId}}`
+            );
+          }
         }
         break;
+      //---------------------------------*** 3***------------------------------------------//
     }
-    // if (data.eventName == 'AgreementCreated') {
-    // } else if (data.eventName == 'RecordCreated') {
-    // } else if (data.eventName == 'NewTokenCreated') {
-    // } else if (data.eventName == 'TracksCreated') {
-    //   try {
-
-    //   } catch (error) {
-    //     console.log('🚀 ~ file: index.ts:242 ~ processData ~ error:', error);
-    //   }
-    // }
   } catch (err: any) {
-    if (
-      err.__type ===
-      'com.amazonaws.dynamodb.v20120810#ConditionalCheckFailedException'
-    ) {
-      console.log('Conditional check failed');
-    } else {
-      console.log(err);
-    }
+    checkError(err);
   }
   return data;
 }
+function checkError(err: any) {
+  if (
+    err.__type ===
+    'com.amazonaws.dynamodb.v20120810#ConditionalCheckFailedException'
+  ) {
+    console.log('Conditional check failed');
+  } else {
+    console.log(err);
+  }
+}
 
 (async () => {
-  // await createRecordsTable();
-  // await createGlobalCounterTable();
-  // await createTracksTable();
-  // await createContributionVotesTable();
-  // await createContributionTable();
-  // await createContributionBallotTable();
-  // await createContributionCounterOfferTable();
-  // await createAgreementsTable();
-  // await createAgreementBallotTable();
-  // await createAgreementVotesTable();
+  await createTokenDataTable();
+  await createRecordsTable();
+  await createGlobalCounterTable();
+  await createTracksTable();
+  await createContributionVotesTable();
+  await createContributionTable();
+  await createContributionBallotTable();
+  await createContributionCounterOfferTable();
+  await createAgreementsTable();
+  await createAgreementBallotTable();
+  await createAgreementVotesTable();
   await index();
 })();
