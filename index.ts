@@ -22,6 +22,8 @@ import {
   DBRecord,
   NewTokenCreated,
   RecordCreated,
+  RoyaltyPayment,
+  RoyaltyPaymentClaimed,
   TracksCreated,
 } from './types';
 import {
@@ -44,6 +46,10 @@ import createContributionVotesTable from './schema/contributionVotesTable';
 import createAgreementBallotTable from './schema/agreementBallotTable';
 import createAgreementVotesTable from './schema/agreementVotesTable';
 import createTokenDataTable from './schema/tokenDataTable';
+import createRoyaltyTable from './schema/RoyaltyTable';
+import createUserRoyaltyInfoPerAgreement from './schema/UserRoyaltyInfoPerAgreementTable';
+import createUserRoyaltyInfo from './schema/UserRoyaltyInfoTable';
+import createClaimedRoyaltyInfoTable from './schema/claimedRoyaltyInfo';
 
 const ddbClient = new DynamoDBClient({
   region: 'us-east-2',
@@ -743,6 +749,142 @@ async function processData(data: DBRecord) {
         }
         break;
       //---------------------------------*** 3***------------------------------------------//
+      case 'RoyaltyPayment':
+        {
+          const royaltyPaymentCreated: RoyaltyPayment = JSON.parse(
+            data.eventData
+          );
+
+          const royaltyDataInfoEntry = {
+            royaltyId: royaltyPaymentCreated.royaltyId,
+            agreementId: royaltyPaymentCreated.agreementId,
+            recordId: royaltyPaymentCreated.recordId,
+            royaltyAmountWei: royaltyPaymentCreated.royaltyAmountWei,
+            tokenId: royaltyPaymentCreated.tokenId,
+            royaltyPerTokenWei: royaltyPaymentCreated.royaltyPerTokenWei,
+            snapshotId: royaltyPaymentCreated.snapshotId,
+          };
+          await putData(TABLES.ROYALTY_TABLE, royaltyDataInfoEntry);
+
+          // Update the royalty count in the agreement table
+          const params: UpdateItemCommandInput = {
+            TableName: TABLES.AGREEMENTS_TABLE,
+            Key: marshall({
+              agreementId: royaltyPaymentCreated.agreementId,
+            }),
+            ExpressionAttributeNames: {
+              '#royaltiesCount': 'royaltiesCount',
+              ...getBlockAttributeNames(),
+            },
+            ExpressionAttributeValues: marshall({
+              ':inc': 1,
+              ...getBlockAttributeValues(blockNumber, eventIndex),
+            }),
+            ConditionExpression: getEventAndBlockCheckExpression(),
+            UpdateExpression: `ADD #royaltiesCount :inc ${setEventAndBlockExxpression()}`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
+        }
+        break;
+      case 'RoyaltyPaymentClaimed':
+        {
+          const royaltyPaymentClaimed: RoyaltyPaymentClaimed = JSON.parse(
+            data.eventData
+          );
+
+          // Insert the royalty claim record
+          const royaltyDataInfoEntry = {
+            agreementId: royaltyPaymentClaimed.agreementId,
+            royaltyId: royaltyPaymentClaimed.royaltyId,
+            recordId: royaltyPaymentClaimed.recordId,
+            rewardAmount: royaltyPaymentClaimed.rewardAmount,
+            user: royaltyPaymentClaimed.userAddress,
+          };
+          await putData(TABLES.CLAIMED_ROYALTY_INFO, royaltyDataInfoEntry);
+
+          // Update the royalty claimed count in the agreement table
+          const params: UpdateItemCommandInput = {
+            TableName: TABLES.ROYALTY_TABLE,
+            Key: marshall({
+              royaltyId: royaltyPaymentClaimed.royaltyId,
+            }),
+            ExpressionAttributeNames: {
+              '#royaltiesClaimedCount': 'royaltiesClaimedCount',
+              ...getBlockAttributeNames(),
+            },
+            ExpressionAttributeValues: marshall({
+              ':inc': 1,
+              ...getBlockAttributeValues(blockNumber, eventIndex),
+            }),
+            ConditionExpression: getEventAndBlockCheckExpression(),
+            UpdateExpression: `ADD #royaltiesClaimedCount :inc ${setEventAndBlockExxpression()}`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
+
+          // Update how many claims made by single user
+          const singleUserClaim: UpdateItemCommandInput = {
+            TableName: TABLES.USER_ROYALTY_INFO,
+            Key: marshall({
+              user: royaltyPaymentClaimed.userAddress,
+            }),
+            ExpressionAttributeNames: {
+              '#royaltyClaimCount': 'royaltyClaimCount',
+              ...getBlockAttributeNames(),
+            },
+            ExpressionAttributeValues: marshall({
+              ':inc': 1,
+              ...getBlockAttributeValues(blockNumber, eventIndex),
+            }),
+            ConditionExpression: getEventAndBlockCheckExpression(),
+            UpdateExpression: `ADD #royaltyClaimCount :inc ${setEventAndBlockExxpression()}`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(singleUserClaim);
+          } catch (err: any) {
+            checkError(err);
+          }
+
+          // Update how many claims made by single user for a specific agreement
+          const singleUserClaimForSingleAgreement: UpdateItemCommandInput = {
+            TableName: TABLES.USER_ROYALTY_INFO_PER_AGREEMENT,
+            Key: marshall({
+              user: royaltyPaymentClaimed.userAddress,
+              agreementId: royaltyPaymentClaimed.agreementId,
+            }),
+            ExpressionAttributeNames: {
+              '#royaltyClaimCount': 'royaltyClaimCount',
+              ...getBlockAttributeNames(),
+            },
+            ExpressionAttributeValues: marshall({
+              ':inc': 1,
+              ...getBlockAttributeValues(blockNumber, eventIndex),
+            }),
+            ConditionExpression: getEventAndBlockCheckExpression(),
+            UpdateExpression: `ADD #royaltyClaimCount :inc ${setEventAndBlockExxpression()}`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(singleUserClaimForSingleAgreement);
+          } catch (err: any) {
+            checkError(err);
+          }
+        }
+        break;
     }
   } catch (err: any) {
     checkError(err);
@@ -772,5 +914,10 @@ function checkError(err: any) {
   await createAgreementsTable();
   await createAgreementBallotTable();
   await createAgreementVotesTable();
+  await createRoyaltyTable();
+  await createUserRoyaltyInfoPerAgreement();
+  await createUserRoyaltyInfo();
+  await createClaimedRoyaltyInfoTable();
+
   await index();
 })();

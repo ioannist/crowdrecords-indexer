@@ -429,7 +429,7 @@ const eventData: {
       },
     },
     // *------*------*-------*
-    // // *------*---This flow is for the new Agreement, expecting Acceptance---*-------*
+    // *------*---This flow is for the new Agreement, expecting Acceptance---*-------*
     {
       eventName: 'INSERT',
       dynamodb: {
@@ -486,6 +486,141 @@ const eventData: {
           }),
           blockNumber: 5,
           eventIndex: 3,
+        },
+      },
+    },
+    // *------*------*-------*
+    // *------*---This flow is dependent on above flow, needs accepted agreement, expecting Royalty payment and then claiming by 2 users ---*-------*
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'RoyaltyPayment',
+          eventData: JSON.stringify({
+            agreementId: 1,
+            recordId: 1,
+            totalSupplyWei: '1000000000000000000000000', // 1000000 ETH
+            royaltyAmountWei: '1000000000',
+            royaltyId: 1,
+            tokenId: 2,
+            royaltyPerTokenWei: '1000',
+            snapshotId: 1,
+          }),
+          blockNumber: 6,
+          eventIndex: 1,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'RoyaltyPaymentClaimed',
+          eventData: JSON.stringify({
+            agreementId: 1,
+            recordId: 1,
+            royaltyId: 1,
+            rewardAmount: '500000000',
+            userAddress: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+          }),
+          blockNumber: 6,
+          eventIndex: 2,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'RoyaltyPaymentClaimed',
+          eventData: JSON.stringify({
+            agreementId: 1,
+            recordId: 1,
+            royaltyId: 1,
+            rewardAmount: '500000000',
+            userAddress: '0xd6F211245B2bE47EC0449aA84a22e1d54708995B',
+          }),
+          blockNumber: 6,
+          eventIndex: 3,
+        },
+      },
+    },
+
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'RoyaltyPayment',
+          eventData: JSON.stringify({
+            agreementId: 1,
+            recordId: 1,
+            totalSupplyWei: '1000000000000000000000000', // 1000000 ETH
+            royaltyAmountWei: '2000000000',
+            royaltyId: 2,
+            tokenId: 2,
+            royaltyPerTokenWei: '2000',
+            snapshotId: 1,
+          }),
+          blockNumber: 6,
+          eventIndex: 4,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'RoyaltyPaymentClaimed',
+          eventData: JSON.stringify({
+            agreementId: 1,
+            recordId: 1,
+            royaltyId: 2,
+            rewardAmount: '1000000000',
+            userAddress: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+          }),
+          blockNumber: 6,
+          eventIndex: 5,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'RoyaltyPaymentClaimed',
+          eventData: JSON.stringify({
+            agreementId: 1,
+            recordId: 1,
+            royaltyId: 2,
+            rewardAmount: '500000000',
+            userAddress: '0xe1F211245B2bE47EC0449aA84a22e1d54708995B',
+          }),
+          blockNumber: 6,
+          eventIndex: 6,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'RoyaltyPaymentClaimed',
+          eventData: JSON.stringify({
+            agreementId: 1,
+            recordId: 1,
+            royaltyId: 2,
+            rewardAmount: '500000000',
+            userAddress: '0xe2F211245B2bE47EC0449aA84a22e1d54708995B',
+          }),
+          blockNumber: 6,
+          eventIndex: 7,
         },
       },
     },

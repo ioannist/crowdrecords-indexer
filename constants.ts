@@ -15,9 +15,10 @@ export const TABLES = {
   AGREEMENTS_TABLE: 'AgreementsTable',
   AGREEMENTS_BALLOT_TABLE: 'AgreementsBallotTable',
   AGREEMENTS_VOTE_TABLE: 'AgreementsVotesTable',
-
-  RECORD_ROYALTY_INFO: 'RecordRoyaltyInfo',
+  ROYALTY_TABLE: 'RoyaltyTable',
   USER_ROYALTY_INFO: 'UserRoyaltyInfo',
+  USER_ROYALTY_INFO_PER_AGREEMENT: 'UserRoyaltyInfoPerAgreement',
+  CLAIMED_ROYALTY_INFO: 'ClaimedRoyaltyInfo',
 };
 
 export const CONTRIBUTION_STATUS_MAP: { [key: number]: string } = {

@@ -16,24 +16,24 @@ export interface AgreementCreated {
   contractHash: string;
   creationDate: number;
   isPresent: boolean;
-  depositAmount: number;
+  depositAmount: string;
   votingEndBlock: number;
 }
 export interface RoyaltyPayment {
   agreementId: number;
   recordId: number;
-  totalSupplyWei: number;
-  royaltyAmountWei: number;
+  totalSupplyWei: string;
+  royaltyAmountWei: string;
   royaltyId: number;
   tokenId: number;
-  royaltyPerTokenWei: number;
+  royaltyPerTokenWei: string;
   snapshotId: number;
 }
 export interface RoyaltyPaymentClaimed {
   agreementId: number;
   royaltyId: number;
   recordId: number;
-  rewardAmount: number;
+  rewardAmount: string;
   userAddress: string;
 }
 export interface AgreementVoting {
@@ -81,8 +81,8 @@ export interface DilutionRequestCreated {
   dilutionId: number;
   ballotId: number;
   tokenId: number;
-  amount: number;
-  depositAmount: number;
+  amount: string;
+  depositAmount: string;
   votingEndBlock: number;
 }
 export interface DilutionVoting {
@@ -104,10 +104,10 @@ export interface BuyOrder {
   isLockedInRatio: boolean;
   creationDate: number;
   communityTokenId: number;
-  communityTokenAmount: number;
+  communityTokenAmount: string;
   communityTokenCRD: number;
   governanceTokenId: number;
-  governanceTokenAmount: number;
+  governanceTokenAmount: string;
   governanceTokenCRD: number;
   crdBalance: number;
 }
@@ -117,12 +117,12 @@ export interface SaleBought {
   buyer: string;
   creationDate: number;
   communityTokenId: number;
-  communityTokenAmount: number;
+  communityTokenAmount: string;
   communityTokenCRD: number;
   governanceTokenId: number;
-  governanceTokenAmount: number;
+  governanceTokenAmount: string;
   governanceTokenCRD: number;
-  amountTransferred: number;
+  amountTransferred: string;
 }
 export interface OrderClose {
   saleId: number;
@@ -178,22 +178,22 @@ export interface NewVersionVotingBallotCreated {
   versionRequestId: number;
   ballotId: number;
   creationDate: number;
-  depositAmount: number;
+  depositAmount: string;
   votingEndBlock: number;
 }
 export interface NewVersionTokenDistribution {
   versionRequestId: number;
-  totalSupplyWei: number;
-  rewardAmountWei: number;
+  totalSupplyWei: string;
+  rewardAmountWei: string;
   tokenId: number;
   rewardTokenId: number;
-  rewardPerTokenWei: number;
+  rewardPerTokenWei: string;
   snapshotId: number;
 }
 export interface NewTokenClaimed {
   versionRequestId: number;
   rewardTokenId: number;
-  rewardAmount: number;
+  rewardAmount: string;
   userAddress: string;
 }
 export interface TrackPayload {
@@ -236,7 +236,7 @@ export interface TokenTransfer {
   to: string;
   transferDate: number;
   tokenId: number;
-  amount: number;
+  amount: string;
   symbol: string;
 }
 export interface NewTokenCreated {
@@ -244,7 +244,7 @@ export interface NewTokenCreated {
   symbol: string;
   image: string;
   creationDate: number;
-  tokenAmount: number;
+  tokenAmount: string;
   tokenId: number;
   tokenType: number;
 }
@@ -252,7 +252,7 @@ export interface TokenMinted {
   recordId: number;
   tokenId: number;
   creationDate: number;
-  tokenAmount: number;
+  tokenAmount: string;
 }
 export interface ContributionRewardTransferred {
   to: string;
@@ -283,7 +283,7 @@ export interface ContributionBallotCreated {
   governanceTokenId: number;
   ballotId: number;
   creationDate: number;
-  depositAmount: number;
+  depositAmount: string;
   votingEndBlock: number;
 }
 export interface ContributionVoting {
