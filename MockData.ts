@@ -121,7 +121,7 @@ const eventData: {
             governanceTokenId: 3,
             ballotId: 1,
             creationDate: 12345678,
-            depositAmount: 20000000,
+            depositAmount: '20000000',
             votingEndBlock: 123,
           }),
           blockNumber: 1,
@@ -325,7 +325,7 @@ const eventData: {
             governanceTokenId: 3,
             ballotId: 2,
             creationDate: 12345678,
-            depositAmount: 20000000,
+            depositAmount: '20000000',
             votingEndBlock: 123,
           }),
           blockNumber: 3,
@@ -386,7 +386,7 @@ const eventData: {
             contractHash: 'asdas',
             creationDate: new Date().getTime(),
             isPresent: true,
-            depositAmount: 10000000,
+            depositAmount: '10000000',
             votingEndBlock: 456,
           }),
           blockNumber: 4,
@@ -447,7 +447,7 @@ const eventData: {
             contractHash: 'asdas',
             creationDate: new Date().getTime(),
             isPresent: true,
-            depositAmount: 10000000,
+            depositAmount: '10000000',
             votingEndBlock: 666,
           }),
           blockNumber: 5,
@@ -621,6 +621,248 @@ const eventData: {
           }),
           blockNumber: 6,
           eventIndex: 7,
+        },
+      },
+    },
+    // *------*------*-------*
+    // *------*---This flow is for new version creation---*-------*
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'VersionRequest',
+          eventData: JSON.stringify({
+            requestId: 1,
+            recordData: {
+              name: 'Record version 1',
+              image: 'version 1 image',
+              seedId: 1,
+              parentId: 1,
+              owner: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+              recordCategory: 'category',
+              creationDate: new Date().getTime(),
+              isPresent: true,
+            },
+            governanceToken: {
+              totalSupply: '1000000000000000000000000',
+              oldContributorShare: '250000000000000000000000',
+              userBalance: '250000000000000000000000',
+              symbol: 'New Version Gov',
+              image: 'New Version Gov Image 1',
+            },
+            communityToken: {
+              totalSupply: '1000000000000000000000000',
+              oldContributorShare: '250000000000000000000000',
+              userBalance: '250000000000000000000000',
+              symbol: 'New Version Comm',
+              image: 'New Version Comm Image 1',
+            },
+            contributionIds: [2, 3],
+            requester: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+            oldVersionId: 1,
+            tokenId: 2,
+            ballotId: 1,
+          }),
+          blockNumber: 7,
+          eventIndex: 1,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewVersionVotingBallotCreated',
+          eventData: JSON.stringify({
+            requester: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+            versionRequestId: 1,
+            ballotId: 1,
+            creationDate: new Date().getTime(),
+            depositAmount: '10000',
+            votingEndBlock: 123456,
+          }),
+          blockNumber: 6,
+          eventIndex: 2,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewVersionRequestVoting',
+          eventData: JSON.stringify({
+            voter: '0xe1F211245B2bE47EC0449aA84a22e1d54708994A',
+            versionRequestId: 1,
+            ballotId: 1,
+            vote: true,
+          }),
+          blockNumber: 6,
+          eventIndex: 2,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewVersionRequestVoting',
+          eventData: JSON.stringify({
+            voter: '0xe2F211245B2bE47EC0449aA84a22e1d54708994A',
+            versionRequestId: 1,
+            ballotId: 1,
+            vote: true,
+          }),
+          blockNumber: 6,
+          eventIndex: 3,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewVersionRequestVoting',
+          eventData: JSON.stringify({
+            voter: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+            versionRequestId: 1,
+            ballotId: 1,
+            vote: true,
+          }),
+          blockNumber: 6,
+          eventIndex: 4,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewVersionRequestResult',
+          eventData: JSON.stringify({
+            versionReqId: 1,
+            tokenId: 2,
+            ballotId: 1,
+            result: true,
+            minTurnOut: true,
+            newRecordId: 3,
+          }),
+          blockNumber: 6,
+          eventIndex: 5,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewVersionTokenDistribution',
+          eventData: JSON.stringify({
+            versionRequestId: 1,
+            totalSupplyWei: '1000000000000000000000000',
+            rewardAmountWei: '250000000000000000000000',
+            tokenId: 2,
+            rewardTokenId: 4,
+            rewardPerTokenWei: '250000000000000000',
+            snapshotId: 2,
+          }),
+          blockNumber: 6,
+          eventIndex: 6,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewVersionTokenDistribution',
+          eventData: JSON.stringify({
+            versionRequestId: 1,
+            totalSupplyWei: '1000000000000000000000000',
+            rewardAmountWei: '250000000000000000000000',
+            tokenId: 2,
+            rewardTokenId: 4,
+            rewardPerTokenWei: '250000000000000000',
+            snapshotId: 2,
+          }),
+          blockNumber: 6,
+          eventIndex: 7,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewTokenClaimed',
+          eventData: JSON.stringify({
+            versionRequestId: 1,
+            rewardTokenId: 4,
+            rewardAmount: '25000000000000000000',
+            userAddress: '0xe1F211245B2bE47EC0449aA84a22e1d54708994A',
+          }),
+          blockNumber: 6,
+          eventIndex: 8,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewTokenClaimed',
+          eventData: JSON.stringify({
+            versionRequestId: 1,
+            rewardTokenId: 4,
+            rewardAmount: '25000000000000000000',
+            userAddress: '0xe2F211245B2bE47EC0449aA84a22e1d54708994A',
+          }),
+          blockNumber: 6,
+          eventIndex: 9,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewTokenClaimed',
+          eventData: JSON.stringify({
+            versionRequestId: 1,
+            rewardTokenId: 4,
+            rewardAmount: '25000000000000000000',
+            userAddress: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+          }),
+          blockNumber: 6,
+          eventIndex: 10,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'NewTokenClaimed',
+          eventData: JSON.stringify({
+            versionRequestId: 1,
+            rewardTokenId: 5,
+            rewardAmount: '25000000000000000000',
+            userAddress: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+          }),
+          blockNumber: 6,
+          eventIndex: 11,
         },
       },
     },

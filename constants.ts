@@ -19,6 +19,11 @@ export const TABLES = {
   USER_ROYALTY_INFO: 'UserRoyaltyInfo',
   USER_ROYALTY_INFO_PER_AGREEMENT: 'UserRoyaltyInfoPerAgreement',
   CLAIMED_ROYALTY_INFO: 'ClaimedRoyaltyInfo',
+  NEW_VERSION_REQUEST_TABLE: 'NewVersionRequest',
+  NEW_VERSION_VOTING_TABLE: 'NewVersionVoting',
+  NEW_VERSION_REQUEST_BALLOT_TABLE: 'NewVersionRequestBallot',
+  NEW_VERSION_TOKEN_DISTRIBUTION_TABLE: 'NewVersionTokenDistribution',
+  CLAIMED_TOKEN_TABLE: 'ClaimedTokenTable',
 };
 
 export const CONTRIBUTION_STATUS_MAP: { [key: number]: string } = {

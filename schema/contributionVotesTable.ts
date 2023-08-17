@@ -4,7 +4,10 @@ import { createTableIfNotExists } from '../db/dynamoClient';
 const createContributionVotesTable = async () => {
   const params = {
     TableName: TABLES.CONTRIBUTION_VOTING_TABLE,
-    KeySchema: [{ AttributeName: 'ballotId', KeyType: 'HASH' }],
+    KeySchema: [
+      { AttributeName: 'ballotId', KeyType: 'HASH' },
+      { AttributeName: 'voter', KeyType: 'RANGE' },
+    ],
     AttributeDefinitions: [
       { AttributeName: 'ballotId', AttributeType: 'N' },
       { AttributeName: 'voter', AttributeType: 'S' },

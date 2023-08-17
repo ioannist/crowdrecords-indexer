@@ -140,9 +140,9 @@ export interface RecordCreated {
   creationDate: number;
 }
 export interface NewVersionTokenStruct {
-  totalSupply: number;
-  oldContributorShare: number;
-  userBalance: number;
+  totalSupply: string;
+  oldContributorShare: string;
+  userBalance: string;
   symbol: string;
   image: string;
 }
@@ -313,4 +313,13 @@ export interface ContributionBallotResult {
 }
 export interface VotingContractAdded {
   votingContractAddress: string;
+}
+
+export interface NewVersionRequestResult {
+  versionReqId: number;
+  tokenId: number;
+  ballotId: number;
+  result: boolean;
+  minTurnOut: boolean;
+  newRecordId: number;
 }

@@ -20,11 +20,17 @@ import {
   CounterOfferAction,
   CounterOfferForContribution,
   DBRecord,
+  NewTokenClaimed,
   NewTokenCreated,
+  NewVersionRequestResult,
+  NewVersionTokenDistribution,
+  NewVersionVoting,
+  NewVersionVotingBallotCreated,
   RecordCreated,
   RoyaltyPayment,
   RoyaltyPaymentClaimed,
   TracksCreated,
+  VersionRequest,
 } from './types';
 import {
   CONTRIBUTION_STATUS_MAP,
@@ -50,6 +56,12 @@ import createRoyaltyTable from './schema/RoyaltyTable';
 import createUserRoyaltyInfoPerAgreement from './schema/UserRoyaltyInfoPerAgreementTable';
 import createUserRoyaltyInfo from './schema/UserRoyaltyInfoTable';
 import createClaimedRoyaltyInfoTable from './schema/claimedRoyaltyInfo';
+import createNewVersionRequestTable from './schema/newVersionRequestTable';
+import createNewVersionVoting from './schema/newVersionVotingTable';
+import createNewVersionRequestBallot from './schema/newVersionRequestBallotTable';
+import createNewVersionTokenDistributionTable from './schema/newVersionTokenDistributionTable';
+import { create } from 'ts-node';
+import createNewTokenClaimedTable from './schema/newTokenClaimedTable';
 
 const ddbClient = new DynamoDBClient({
   region: 'us-east-2',
@@ -460,14 +472,14 @@ async function processData(data: DBRecord) {
               ballotId: ballotResult.ballotId,
             }),
             ExpressionAttributeNames: {
-              '#result': 'result',
+              '#status': 'status',
               '#minTurnOut': 'minTurnOut',
             },
             ExpressionAttributeValues: marshall({
-              ':result': ballotResult.result,
+              ':status': ballotResult.result ? 'ACCEPTED' : 'REJECTED',
               ':minTurnOut': ballotResult.minTurnOut,
             }),
-            UpdateExpression: `SET #result = :result, #minTurnOut = :minTurnOut`,
+            UpdateExpression: `SET #status = :status, #minTurnOut = :minTurnOut`,
             ReturnValues: 'UPDATED_NEW',
           };
 
@@ -659,14 +671,14 @@ async function processData(data: DBRecord) {
               ballotId: ballotResult.ballotId,
             }),
             ExpressionAttributeNames: {
-              '#result': 'result',
+              '#status': 'status',
               '#minTurnOut': 'minTurnOut',
             },
             ExpressionAttributeValues: marshall({
-              ':result': ballotResult.result,
+              ':status': ballotResult.result ? 'ACCEPTED' : 'REJECTED',
               ':minTurnOut': ballotResult.minTurnOut,
             }),
-            UpdateExpression: `SET #result = :result, #minTurnOut = :minTurnOut`,
+            UpdateExpression: `SET #status = :status, #minTurnOut = :minTurnOut`,
             ReturnValues: 'UPDATED_NEW',
           };
 
@@ -885,6 +897,144 @@ async function processData(data: DBRecord) {
           }
         }
         break;
+      //---------------------------------*** 4***------------------------------------------//
+      case 'VersionRequest':
+        {
+          const versionRequest: VersionRequest = JSON.parse(data.eventData);
+
+          const versionRequestData = {
+            requestId: versionRequest.requestId,
+            recordData: versionRequest.recordData,
+            governanceToken: versionRequest.governanceToken,
+            communityToken: versionRequest.communityToken,
+            contributionIds: versionRequest.contributionIds,
+            requester: versionRequest.requester,
+            oldVersionId: versionRequest.oldVersionId,
+            tokenId: versionRequest.tokenId,
+            ballotId: versionRequest.ballotId,
+            status: 'PENDING',
+          };
+          await putData(TABLES.NEW_VERSION_REQUEST_TABLE, versionRequestData);
+        }
+        break;
+      case 'NewVersionVotingBallotCreated':
+        {
+          const ballot: NewVersionVotingBallotCreated = JSON.parse(
+            data.eventData
+          );
+
+          const ballotData = {
+            requester: ballot.requester,
+            versionRequestId: ballot.versionRequestId,
+            ballotId: ballot.ballotId,
+            creationDate: ballot.creationDate,
+            depositAmount: ballot.depositAmount,
+            votingEndBlock: ballot.votingEndBlock,
+            status: 'PENDING',
+          };
+          await putData(TABLES.NEW_VERSION_REQUEST_BALLOT_TABLE, ballotData);
+        }
+        break;
+      case 'NewVersionRequestVoting':
+        {
+          const voting: NewVersionVoting = JSON.parse(data.eventData);
+
+          const votingData = {
+            ballotId: voting.ballotId,
+            vote: voting.vote,
+            voter: voting.voter,
+            versionRequestId: voting.versionRequestId,
+          };
+          await putData(TABLES.NEW_VERSION_VOTING_TABLE, votingData);
+        }
+        break;
+      case 'NewVersionRequestResult':
+        {
+          const votingResult: NewVersionRequestResult = JSON.parse(
+            data.eventData
+          );
+
+          // Update the result in the ballot table
+          const params: UpdateItemCommandInput = {
+            TableName: TABLES.NEW_VERSION_REQUEST_BALLOT_TABLE,
+            Key: marshall({
+              ballotId: votingResult.ballotId,
+            }),
+            ExpressionAttributeNames: {
+              '#minTurnOut': 'minTurnOut',
+              '#status': 'status',
+            },
+            ExpressionAttributeValues: marshall({
+              ':minTurnOut': votingResult.minTurnOut,
+              ':status': votingResult.result ? 'ACCEPTED' : 'REJECTED',
+            }),
+            UpdateExpression: `SET #status = :status, #minTurnOut = :minTurnOut`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
+
+          // Update the  newRecordVersionRequest table
+          const newVersionReqParams: UpdateItemCommandInput = {
+            TableName: TABLES.NEW_VERSION_REQUEST_TABLE,
+            Key: marshall({
+              requestId: votingResult.versionReqId,
+            }),
+            ExpressionAttributeNames: {
+              '#status': 'status',
+            },
+            ExpressionAttributeValues: marshall({
+              ':status': votingResult.result ? 'ACCEPTED' : 'REJECTED',
+            }),
+            UpdateExpression: `SET #status = :status`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(newVersionReqParams);
+          } catch (err: any) {
+            checkError(err);
+          }
+        }
+        break;
+      case 'NewVersionTokenDistribution':
+        {
+          const tokenDistribution: NewVersionTokenDistribution = JSON.parse(
+            data.eventData
+          );
+
+          const tokenDistributionData = {
+            versionRequestId: tokenDistribution.versionRequestId,
+            totalSupplyWei: tokenDistribution.totalSupplyWei,
+            rewardAmountWei: tokenDistribution.rewardAmountWei,
+            tokenId: tokenDistribution.tokenId,
+            rewardTokenId: tokenDistribution.rewardTokenId,
+            rewardPerTokenWei: tokenDistribution.rewardPerTokenWei,
+            snapshotId: tokenDistribution.snapshotId,
+          };
+          await putData(
+            TABLES.NEW_VERSION_TOKEN_DISTRIBUTION_TABLE,
+            tokenDistributionData
+          );
+        }
+        break;
+      case 'NewTokenClaimed':
+        {
+          const newTokenClaimed: NewTokenClaimed = JSON.parse(data.eventData);
+
+          const tokenClaimData = {
+            versionRequestId: newTokenClaimed.versionRequestId,
+            rewardTokenId: newTokenClaimed.rewardTokenId,
+            rewardAmount: newTokenClaimed.rewardAmount,
+            user: newTokenClaimed.userAddress,
+          };
+          await putData(TABLES.CLAIMED_TOKEN_TABLE, tokenClaimData);
+        }
+        break;
     }
   } catch (err: any) {
     checkError(err);
@@ -918,6 +1068,12 @@ function checkError(err: any) {
   await createUserRoyaltyInfoPerAgreement();
   await createUserRoyaltyInfo();
   await createClaimedRoyaltyInfoTable();
+  await createNewVersionRequestTable();
+  await createNewVersionRequestTable();
+  await createNewVersionVoting();
+  await createNewVersionRequestBallot();
+  await createNewVersionTokenDistributionTable();
+  await createNewTokenClaimedTable();
 
   await index();
 })();
