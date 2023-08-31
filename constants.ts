@@ -28,6 +28,8 @@ export const TABLES = {
   DILUTION_REQUEST_BALLOT_TABLE: 'DilutionRequestBallotTable',
   DILUTION_REQUEST_VOTING_TABLE: 'DilutionRequestVotingTable',
   TOKEN_MINTED_TABLE: 'TokenMintedTable',
+  ORDER_CREATED_TABLE: 'OrderCreatedTable',
+  ORDER_PURCHASED_TABLE: 'OrderPurchasedTable',
 };
 
 export const CONTRIBUTION_STATUS_MAP: { [key: number]: string } = {

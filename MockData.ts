@@ -977,6 +977,72 @@ const eventData: {
       },
     },
     // *------*------*-------*
+    // *------*---This flow is for testing order creation and order placement---*-------*
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'BuyOrder',
+          eventData: JSON.stringify({
+            saleId: 1,
+            buyer: '0xe1F211245B2bE47EC0449aA84a22e1d54708994A',
+            isLockedInRatio: false,
+            creationDate: new Date().getTime(),
+            communityTokenId: 2,
+            communityTokenAmount: '100000000000000000000', // this is 100 tokens, 1 CRD for 1 community
+            communityTokenCRD: '100000000000000000000',
+            governanceTokenId: 3,
+            governanceTokenAmount: '50000000000000000000', // this is 50 tokens, 2 CRD for 1 governance
+            governanceTokenCRD: '100000000000000000000',
+            crdBalance: '200000000000000000000',
+          }),
+          blockNumber: 9,
+          eventIndex: 1,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'SaleBought',
+          eventData: JSON.stringify({
+            purchaseId: 1,
+            saleId: 1,
+            seller: '0xf7F211245B2bE47EC0449aA84a22e1d54708994A',
+            buyer: '0xe1F211245B2bE47EC0449aA84a22e1d54708994A',
+            creationDate: new Date().getTime(),
+            communityTokenId: 2,
+            communityTokenAmount: '10000000000000000000', // this is 10 tokens, 1 CRD for 1 community
+            communityTokenCRD: '10000000000000000000',
+            governanceTokenId: 3,
+            governanceTokenAmount: '5000000000000000000', // this is 5 tokens, 2 CRD for 1 governance
+            governanceTokenCRD: '10000000000000000000',
+            amountTransferred: '20000000000000000000',
+          }),
+          blockNumber: 9,
+          eventIndex: 2,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'OrderClose',
+          eventData: JSON.stringify({
+            saleId: 1,
+            creationDate: new Date().getTime(),
+            remainingBalance: '180000000000000000000',
+          }),
+          blockNumber: 9,
+          eventIndex: 3,
+        },
+      },
+    },
   ],
 };
 

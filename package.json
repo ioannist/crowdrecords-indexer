@@ -13,6 +13,7 @@
         "@aws-sdk/client-dynamodb": "^3.370.0",
         "@aws-sdk/util-dynamodb": "^3.370.0",
         "aws-lambda": "^1.0.7",
+        "bignumber.js": "^4.0.4",
         "ts-node": "^10.9.1"
     },
     "devDependencies": {

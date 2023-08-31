@@ -13,6 +13,7 @@ import {
   AgreementBallotResult,
   AgreementCreated,
   AgreementVoting,
+  BuyOrder,
   ContributionBallotCreated,
   ContributionBallotResult,
   ContributionCreated,
@@ -29,9 +30,11 @@ import {
   NewVersionTokenDistribution,
   NewVersionVoting,
   NewVersionVotingBallotCreated,
+  OrderClose,
   RecordCreated,
   RoyaltyPayment,
   RoyaltyPaymentClaimed,
+  SaleBought,
   TokenMinted,
   TracksCreated,
   VersionRequest,
@@ -71,6 +74,8 @@ import createDilutionRequestTable from './schema/dilutionRequestTable';
 import createDilutionRequestBallotTable from './schema/dilutionRequestBallotTable';
 import createDilutionRequestVotingTable from './schema/dilutionRequestVotingTable';
 import createTokenMintedTable from './schema/tokenMintedTable';
+import createOrderCreatedTable from './schema/orderCreatedTable';
+import createOrderPurchasedTable from './schema/orderPurchasedTable';
 
 const ddbClient = new DynamoDBClient({
   region: 'us-east-2',
@@ -1247,6 +1252,154 @@ async function processData(data: DBRecord) {
           }
         }
         break;
+      //---------------------------------*** 6***------------------------------------------//
+      case 'BuyOrder':
+        {
+          const buyOrder: BuyOrder = JSON.parse(data.eventData);
+
+          const buyOrderData = {
+            orderId: buyOrder.saleId,
+            buyer: buyOrder.buyer,
+            isLockedInRatio: buyOrder.isLockedInRatio,
+            creationDate: buyOrder.creationDate,
+            communityTokenId: buyOrder.communityTokenId,
+            communityTokenAmount: buyOrder.communityTokenAmount,
+            communityTokenCRD: buyOrder.communityTokenCRD,
+            governanceTokenId: buyOrder.governanceTokenId,
+            governanceTokenAmount: buyOrder.governanceTokenAmount,
+            governanceTokenCRD: buyOrder.governanceTokenCRD,
+            crdBalance: buyOrder.crdBalance,
+            status: 'OPEN',
+            remainingCommunityTokenAmount: buyOrder.communityTokenAmount,
+            remainingGovernanceTokenAmount: buyOrder.governanceTokenAmount,
+          };
+          await putData(TABLES.ORDER_CREATED_TABLE, buyOrderData);
+        }
+        break;
+      case 'OrderClose':
+        {
+          const orderClose: OrderClose = JSON.parse(data.eventData);
+
+          const params: UpdateItemCommandInput = {
+            TableName: TABLES.ORDER_CREATED_TABLE,
+            Key: marshall({
+              orderId: orderClose.saleId,
+            }),
+            ExpressionAttributeNames: {
+              '#status': 'status',
+              ...getBlockAttributeNames(),
+            },
+            ExpressionAttributeValues: marshall({
+              ':status': 'CLOSED',
+              ...getBlockAttributeValues(blockNumber, eventIndex),
+            }),
+            ConditionExpression: getEventAndBlockCheckExpression(),
+            UpdateExpression: `${setEventAndBlockExxpression()}, #status = :status`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
+        }
+        break;
+      case 'SaleBought':
+        {
+          const soldData: SaleBought = JSON.parse(data.eventData);
+
+          const soldOrderData = {
+            purchaseId: soldData.purchaseId,
+            orderId: soldData.saleId,
+            seller: soldData.seller,
+            buyer: soldData.buyer,
+            creationDate: soldData.creationDate,
+            communityTokenId: soldData.communityTokenId,
+            communityTokenAmount: soldData.communityTokenAmount,
+            communityTokenCRD: soldData.communityTokenCRD,
+            governanceTokenId: soldData.governanceTokenId,
+            governanceTokenAmount: soldData.governanceTokenAmount,
+            governanceTokenCRD: soldData.governanceTokenCRD,
+            amountTransferred: soldData.amountTransferred,
+          };
+          await putData(TABLES.ORDER_PURCHASED_TABLE, soldOrderData);
+
+          const queryCommand: QueryCommandInput = {
+            TableName: TABLES.ORDER_CREATED_TABLE,
+            KeyConditionExpression: '#orderId = :orderId',
+            ExpressionAttributeNames: {
+              '#orderId': 'orderId',
+            },
+            ExpressionAttributeValues: marshall({
+              ':orderId': soldData.saleId,
+            }),
+          };
+
+          const tokenData = await queryData(queryCommand);
+
+          const orderData = tokenData.Items?.map((item) => {
+            return unmarshall(item);
+          })[0];
+
+          if (orderData) {
+            const communityTokenCRD = new BigNumber(orderData.communityTokenCRD)
+              .sub(soldData.communityTokenCRD)
+              .toString();
+            const communityTokenAmount = new BigNumber(
+              orderData.communityTokenAmount
+            )
+              .sub(soldData.communityTokenAmount)
+              .toString();
+            const governanceTokenCRD = new BigNumber(
+              orderData.governanceTokenCRD
+            )
+              .sub(soldData.governanceTokenCRD)
+              .toString();
+            const governanceTokenAmount = new BigNumber(
+              orderData.governanceTokenAmount
+            )
+              .sub(soldData.governanceTokenAmount)
+              .toString();
+
+            const oldCommunityTokenCRD = orderData.communityTokenCRD;
+            const oldGovernanceTokenCRD = orderData.governanceTokenCRD;
+
+            // Update the tokenTotalCount table
+            const tokenUpdateQuery: UpdateItemCommandInput = {
+              TableName: TABLES.ORDER_CREATED_TABLE,
+              Key: marshall({
+                orderId: soldData.saleId,
+              }),
+              ExpressionAttributeNames: {
+                '#communityTokenCRD': 'communityTokenCRD',
+                '#communityTokenAmount': 'communityTokenAmount',
+                '#governanceTokenCRD': 'governanceTokenCRD',
+                '#governanceTokenAmount': 'governanceTokenAmount',
+                ...getBlockAttributeNames(),
+              },
+              ExpressionAttributeValues: marshall({
+                ':communityTokenCRD': communityTokenCRD,
+                ':communityTokenAmount': communityTokenAmount,
+                ':governanceTokenCRD': governanceTokenCRD,
+                ':governanceTokenAmount': governanceTokenAmount,
+                ':oldCommunityTokenCRD': oldCommunityTokenCRD,
+                ':oldGovernanceTokenCRD': oldGovernanceTokenCRD,
+                ...getBlockAttributeValues(blockNumber, eventIndex),
+              }),
+              ConditionExpression: `${getEventAndBlockCheckExpression()} AND #communityTokenCRD = :oldCommunityTokenCRD AND #governanceTokenCRD = :oldGovernanceTokenCRD`,
+              UpdateExpression: `${setEventAndBlockExxpression()}, #communityTokenCRD = :communityTokenCRD, #communityTokenAmount = :communityTokenAmount, #governanceTokenCRD = :governanceTokenCRD, #governanceTokenAmount = :governanceTokenAmount`,
+              ReturnValues: 'UPDATED_NEW',
+            };
+
+            try {
+              await updateData(tokenUpdateQuery);
+            } catch (err: any) {
+              checkError(err);
+            }
+          }
+        }
+        break;
     }
   } catch (err: any) {
     checkError(err);
@@ -1290,6 +1443,8 @@ function checkError(err: any) {
   await createDilutionRequestBallotTable();
   await createDilutionRequestVotingTable();
   await createTokenMintedTable();
+  await createOrderCreatedTable();
+  await createOrderPurchasedTable();
 
   await index();
 })();

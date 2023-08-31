@@ -110,9 +110,10 @@ export interface BuyOrder {
   governanceTokenId: number;
   governanceTokenAmount: string;
   governanceTokenCRD: number;
-  crdBalance: number;
+  crdBalance: string;
 }
 export interface SaleBought {
+  purchaseId: number;
   saleId: number;
   seller: string;
   buyer: string;
