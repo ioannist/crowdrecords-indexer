@@ -24,6 +24,10 @@ export const TABLES = {
   NEW_VERSION_REQUEST_BALLOT_TABLE: 'NewVersionRequestBallot',
   NEW_VERSION_TOKEN_DISTRIBUTION_TABLE: 'NewVersionTokenDistribution',
   CLAIMED_TOKEN_TABLE: 'ClaimedTokenTable',
+  DILUTION_REQUEST_TABLE: 'DilutionRequestTable',
+  DILUTION_REQUEST_BALLOT_TABLE: 'DilutionRequestBallotTable',
+  DILUTION_REQUEST_VOTING_TABLE: 'DilutionRequestVotingTable',
+  TOKEN_MINTED_TABLE: 'TokenMintedTable',
 };
 
 export const CONTRIBUTION_STATUS_MAP: { [key: number]: string } = {

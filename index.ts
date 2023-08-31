@@ -20,6 +20,9 @@ import {
   CounterOfferAction,
   CounterOfferForContribution,
   DBRecord,
+  DilutionRequestCreated,
+  DilutionResult,
+  DilutionVoting,
   NewTokenClaimed,
   NewTokenCreated,
   NewVersionRequestResult,
@@ -29,6 +32,7 @@ import {
   RecordCreated,
   RoyaltyPayment,
   RoyaltyPaymentClaimed,
+  TokenMinted,
   TracksCreated,
   VersionRequest,
 } from './types';
@@ -38,6 +42,7 @@ import {
   TOKEN_TYPE,
   VOTING_STATUS_MAP,
 } from './constants';
+import BigNumber from 'bignumber.js';
 import createRecordsTable from './schema/recordsTable';
 import { queryData, putData, updateData } from './db/dynamoClient';
 import createGlobalCounterTable from './schema/globalCounterTable';
@@ -62,6 +67,10 @@ import createNewVersionRequestBallot from './schema/newVersionRequestBallotTable
 import createNewVersionTokenDistributionTable from './schema/newVersionTokenDistributionTable';
 import { create } from 'ts-node';
 import createNewTokenClaimedTable from './schema/newTokenClaimedTable';
+import createDilutionRequestTable from './schema/dilutionRequestTable';
+import createDilutionRequestBallotTable from './schema/dilutionRequestBallotTable';
+import createDilutionRequestVotingTable from './schema/dilutionRequestVotingTable';
+import createTokenMintedTable from './schema/tokenMintedTable';
 
 const ddbClient = new DynamoDBClient({
   region: 'us-east-2',
@@ -167,7 +176,7 @@ async function processData(data: DBRecord) {
           const tokenData: NewTokenCreated = JSON.parse(data.eventData);
           const tokenDataEntry = {
             tokenId: tokenData.tokenId,
-            tokenAmount: tokenData.tokenAmount,
+            totalSupply: tokenData.tokenAmount,
             recordId: tokenData.recordId,
             symbol: tokenData.symbol,
             image: tokenData.image,
@@ -472,19 +481,40 @@ async function processData(data: DBRecord) {
               ballotId: ballotResult.ballotId,
             }),
             ExpressionAttributeNames: {
-              '#status': 'status',
+              '#result': 'result',
               '#minTurnOut': 'minTurnOut',
             },
             ExpressionAttributeValues: marshall({
-              ':status': ballotResult.result ? 'ACCEPTED' : 'REJECTED',
+              ':result': ballotResult.result,
               ':minTurnOut': ballotResult.minTurnOut,
             }),
-            UpdateExpression: `SET #status = :status, #minTurnOut = :minTurnOut`,
+            UpdateExpression: `SET #result = :result, #minTurnOut = :minTurnOut`,
             ReturnValues: 'UPDATED_NEW',
           };
 
           try {
             await updateData(updateBallotData);
+          } catch (err: any) {
+            checkError(err);
+          }
+
+          const updateContributionData: UpdateItemCommandInput = {
+            TableName: TABLES.CONTRIBUTION_TABLE,
+            Key: marshall({
+              contributionId: ballotResult.contributionId,
+            }),
+            ExpressionAttributeNames: {
+              '#status': 'status',
+            },
+            ExpressionAttributeValues: marshall({
+              ':status': ballotResult.result ? 'ACCEPTED' : 'REJECTED',
+            }),
+            UpdateExpression: `SET #status = :status`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(updateContributionData);
           } catch (err: any) {
             checkError(err);
           }
@@ -574,6 +604,7 @@ async function processData(data: DBRecord) {
             recordId: agreementCreated.recordId,
             ballotId: agreementCreated.ballotId,
             title: agreementCreated.title,
+            status: 'PENDING',
             contractLink: agreementCreated.contractLink,
             contractHash: agreementCreated.contractHash,
             creationDate: agreementCreated.creationDate,
@@ -664,26 +695,47 @@ async function processData(data: DBRecord) {
             data.eventData
           );
 
-          // Changing the count of the pending contribution counter
           const updateBallotData: UpdateItemCommandInput = {
-            TableName: TABLES.CONTRIBUTION_BALLOT_TABLE,
+            TableName: TABLES.AGREEMENTS_BALLOT_TABLE,
             Key: marshall({
               ballotId: ballotResult.ballotId,
             }),
             ExpressionAttributeNames: {
-              '#status': 'status',
+              '#result': 'result',
               '#minTurnOut': 'minTurnOut',
             },
             ExpressionAttributeValues: marshall({
-              ':status': ballotResult.result ? 'ACCEPTED' : 'REJECTED',
+              ':result': ballotResult.result,
               ':minTurnOut': ballotResult.minTurnOut,
             }),
-            UpdateExpression: `SET #status = :status, #minTurnOut = :minTurnOut`,
+            UpdateExpression: `SET #result = :result, #minTurnOut = :minTurnOut`,
             ReturnValues: 'UPDATED_NEW',
           };
 
           try {
             await updateData(updateBallotData);
+          } catch (err: any) {
+            checkError(err);
+          }
+
+          // update the agreement status
+          const updateAgreementData: UpdateItemCommandInput = {
+            TableName: TABLES.AGREEMENTS_TABLE,
+            Key: marshall({
+              agreementId: ballotResult.agreementId,
+            }),
+            ExpressionAttributeNames: {
+              '#status': 'status',
+            },
+            ExpressionAttributeValues: marshall({
+              ':status': ballotResult.result ? 'ACCEPTED' : 'REJECTED',
+            }),
+            UpdateExpression: `SET #status = :status`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(updateAgreementData);
           } catch (err: any) {
             checkError(err);
           }
@@ -962,13 +1014,13 @@ async function processData(data: DBRecord) {
             }),
             ExpressionAttributeNames: {
               '#minTurnOut': 'minTurnOut',
-              '#status': 'status',
+              '#result': 'result',
             },
             ExpressionAttributeValues: marshall({
               ':minTurnOut': votingResult.minTurnOut,
-              ':status': votingResult.result ? 'ACCEPTED' : 'REJECTED',
+              ':result': votingResult.result,
             }),
-            UpdateExpression: `SET #status = :status, #minTurnOut = :minTurnOut`,
+            UpdateExpression: `SET #result = :result, #minTurnOut = :minTurnOut`,
             ReturnValues: 'UPDATED_NEW',
           };
 
@@ -1035,6 +1087,166 @@ async function processData(data: DBRecord) {
           await putData(TABLES.CLAIMED_TOKEN_TABLE, tokenClaimData);
         }
         break;
+      //---------------------------------*** 5***------------------------------------------//
+      case 'DilutionRequestCreated':
+        {
+          const dilutionRequest: DilutionRequestCreated = JSON.parse(
+            data.eventData
+          );
+
+          const dilutionRequestData = {
+            requester: dilutionRequest.requester,
+            recordId: dilutionRequest.recordId,
+            dilutionId: dilutionRequest.dilutionId,
+            ballotId: dilutionRequest.ballotId,
+            tokenId: dilutionRequest.tokenId,
+            amount: dilutionRequest.amount,
+            status: 'PENDING',
+          };
+          await putData(TABLES.DILUTION_REQUEST_TABLE, dilutionRequestData);
+
+          const ballotData = {
+            ballotId: dilutionRequest.ballotId,
+            owner: dilutionRequest.requester,
+            creationDate: dilutionRequest.creationDate,
+            depositAmount: dilutionRequest.depositAmount,
+            votingEndBlock: dilutionRequest.votingEndBlock,
+          };
+          await putData(TABLES.DILUTION_REQUEST_BALLOT_TABLE, ballotData);
+        }
+        break;
+      case 'DilutionVoting':
+        {
+          const dilutionVoting: DilutionVoting = JSON.parse(data.eventData);
+
+          const dilutionVotingData = {
+            voter: dilutionVoting.voter,
+            dilutionId: dilutionVoting.dilutionId,
+            ballotId: dilutionVoting.ballotId,
+            vote: dilutionVoting.vote,
+          };
+          await putData(
+            TABLES.DILUTION_REQUEST_VOTING_TABLE,
+            dilutionVotingData
+          );
+        }
+        break;
+      case 'DilutionResult':
+        {
+          const votingResult: DilutionResult = JSON.parse(data.eventData);
+
+          // Update the result in the ballot table
+          const params: UpdateItemCommandInput = {
+            TableName: TABLES.DILUTION_REQUEST_BALLOT_TABLE,
+            Key: marshall({
+              ballotId: votingResult.ballotId,
+            }),
+            ExpressionAttributeNames: {
+              '#minTurnOut': 'minTurnOut',
+              '#result': 'result',
+            },
+            ExpressionAttributeValues: marshall({
+              ':minTurnOut': votingResult.minTurnOut,
+              ':result': votingResult.result,
+            }),
+            UpdateExpression: `SET #result = :result, #minTurnOut = :minTurnOut`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(params);
+          } catch (err: any) {
+            checkError(err);
+          }
+
+          // Update the DilutionRequest table
+          const dilutionRequestParam: UpdateItemCommandInput = {
+            TableName: TABLES.DILUTION_REQUEST_TABLE,
+            Key: marshall({
+              dilutionId: votingResult.dilutionId,
+            }),
+            ExpressionAttributeNames: {
+              '#status': 'status',
+            },
+            ExpressionAttributeValues: marshall({
+              ':status': votingResult.result ? 'ACCEPTED' : 'REJECTED',
+            }),
+            UpdateExpression: `SET #status = :status`,
+            ReturnValues: 'UPDATED_NEW',
+          };
+
+          try {
+            await updateData(dilutionRequestParam);
+          } catch (err: any) {
+            checkError(err);
+          }
+        }
+        break;
+      case 'TokenMinted':
+        {
+          const tokenMinted: TokenMinted = JSON.parse(data.eventData);
+
+          const tokenMintedData = {
+            recordId: tokenMinted.recordId,
+            tokenId: tokenMinted.tokenId,
+            creationDate: tokenMinted.creationDate,
+            tokenAmount: tokenMinted.tokenAmount,
+            blockNumber,
+            eventIndex,
+          };
+          await putData(TABLES.TOKEN_MINTED_TABLE, tokenMintedData);
+
+          const queryCommand: QueryCommandInput = {
+            TableName: TABLES.TOKEN_DATA_TABLE,
+            KeyConditionExpression: '#tokenId = :tokenId',
+            ExpressionAttributeNames: {
+              '#tokenId': 'tokenId',
+            },
+            ExpressionAttributeValues: marshall({
+              ':tokenId': tokenMinted.tokenId,
+            }),
+          };
+
+          const tokenData = await queryData(queryCommand);
+
+          const tokenInfo = tokenData.Items?.map((item) => {
+            return unmarshall(item);
+          })[0];
+
+          if (tokenInfo) {
+            const totalSupply = new BigNumber(tokenInfo.totalSupply)
+              .add(tokenMinted.tokenAmount)
+              .toString();
+
+            // Update the tokenTotalCount table
+            const tokenUpdateQuery: UpdateItemCommandInput = {
+              TableName: TABLES.TOKEN_DATA_TABLE,
+              Key: marshall({
+                tokenId: tokenInfo.tokenId,
+              }),
+              ExpressionAttributeNames: {
+                '#totalSupply': 'totalSupply',
+                ...getBlockAttributeNames(),
+              },
+              ExpressionAttributeValues: marshall({
+                ':totalSupply': totalSupply,
+                ...getBlockAttributeValues(blockNumber, eventIndex),
+              }),
+              ConditionExpression: getEventAndBlockCheckExpression(),
+              UpdateExpression: `${setEventAndBlockExxpression()}, #totalSupply = :totalSupply `,
+              ReturnValues: 'UPDATED_NEW',
+            };
+
+            try {
+              await updateData(tokenUpdateQuery);
+            } catch (err: any) {
+              checkError(err);
+            }
+          } else {
+            console.log('Invalid Token Mint Event Encountered');
+          }
+        }
+        break;
     }
   } catch (err: any) {
     checkError(err);
@@ -1074,6 +1286,10 @@ function checkError(err: any) {
   await createNewVersionRequestBallot();
   await createNewVersionTokenDistributionTable();
   await createNewTokenClaimedTable();
+  await createDilutionRequestTable();
+  await createDilutionRequestBallotTable();
+  await createDilutionRequestVotingTable();
+  await createTokenMintedTable();
 
   await index();
 })();

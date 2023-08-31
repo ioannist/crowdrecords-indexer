@@ -4,13 +4,21 @@ import { createTableIfNotExists } from '../db/dynamoClient';
 const createContributionTable = async () => {
   const params = {
     TableName: TABLES.CONTRIBUTION_TABLE,
-    KeySchema: [
-      { AttributeName: 'contributionId', KeyType: 'HASH' },
-      { AttributeName: 'recordId', KeyType: 'RANGE' },
-    ],
+    KeySchema: [{ AttributeName: 'contributionId', KeyType: 'HASH' }],
     AttributeDefinitions: [
       { AttributeName: 'contributionId', AttributeType: 'N' },
       { AttributeName: 'recordId', AttributeType: 'N' },
+    ],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: 'searchByContributionFilterByRecordId',
+        KeySchema: [
+          { AttributeName: 'contributionId', KeyType: 'HASH' },
+          { AttributeName: 'recordId', KeyType: 'RANGE' },
+        ],
+        Projection: { ProjectionType: 'KEYS_ONLY' },
+        BillingMode: 'PAY_PER_REQUEST',
+      },
     ],
     BillingMode: 'PAY_PER_REQUEST',
   };

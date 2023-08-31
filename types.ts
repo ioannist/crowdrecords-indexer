@@ -82,6 +82,7 @@ export interface DilutionRequestCreated {
   ballotId: number;
   tokenId: number;
   amount: string;
+  creationDate: number;
   depositAmount: string;
   votingEndBlock: number;
 }
