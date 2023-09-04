@@ -13,12 +13,15 @@ import {
   UpdateItemCommand,
   UpdateItemCommandInput,
 } from '@aws-sdk/client-dynamodb';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 const ddbClient = new DynamoDBClient({
-  region: 'us-east-2',
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: 'AKIA2JJGHT7ZFAWRCGNF',
-    secretAccessKey: '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',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
   },
 });
 
