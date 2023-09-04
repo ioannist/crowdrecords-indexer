@@ -37,6 +37,9 @@ import {
   SaleBought,
   TokenMinted,
   TracksCreated,
+  Transfer,
+  TransferBatch,
+  TransferSingle,
   VersionRequest,
 } from './types';
 import {
@@ -76,6 +79,7 @@ import createDilutionRequestVotingTable from './schema/dilutionRequestVotingTabl
 import createTokenMintedTable from './schema/tokenMintedTable';
 import createOrderCreatedTable from './schema/orderCreatedTable';
 import createOrderPurchasedTable from './schema/orderPurchasedTable';
+import createUserBalanceTable from './schema/userBalanceTable';
 
 const ddbClient = new DynamoDBClient({
   region: 'us-east-2',
@@ -1310,7 +1314,6 @@ async function processData(data: DBRecord) {
           const soldData: SaleBought = JSON.parse(data.eventData);
 
           const soldOrderData = {
-            purchaseId: soldData.purchaseId,
             orderId: soldData.saleId,
             seller: soldData.seller,
             buyer: soldData.buyer,
@@ -1322,6 +1325,7 @@ async function processData(data: DBRecord) {
             governanceTokenAmount: soldData.governanceTokenAmount,
             governanceTokenCRD: soldData.governanceTokenCRD,
             amountTransferred: soldData.amountTransferred,
+            purchaseId: soldData.purchaseId,
           };
           await putData(TABLES.ORDER_PURCHASED_TABLE, soldOrderData);
 
@@ -1400,12 +1404,182 @@ async function processData(data: DBRecord) {
           }
         }
         break;
+      //---------------------------------*** 6***------------------------------------------//
+      case 'Transfer':
+        {
+          // This is an ERC20 transfer event, which denotes the transfer of CRD tokens
+          const transferData: Transfer = JSON.parse(data.eventData);
+
+          handleTransferEvent(
+            transferData.from,
+            transferData.to,
+            transferData.value,
+            1,
+            blockNumber,
+            eventIndex
+          );
+        }
+        break;
+      case 'TransferSingle':
+        {
+          // This is an ERC1155 transfer event
+          const transferData: TransferSingle = JSON.parse(data.eventData);
+
+          handleTransferEvent(
+            transferData.from,
+            transferData.to,
+            transferData.value,
+            transferData.id,
+            blockNumber,
+            eventIndex
+          );
+        }
+        break;
+      case 'TransferBatch':
+        {
+          // This is an ERC1155 transfer event
+          // This is same as the TransferSingle event but it is batched
+          const transferData: TransferBatch = JSON.parse(data.eventData);
+
+          transferData.ids.forEach(async (id, index) => {
+            handleTransferEvent(
+              transferData.from,
+              transferData.to,
+              transferData.values[index],
+              id,
+              blockNumber,
+              eventIndex
+            );
+          });
+        }
+        break;
     }
   } catch (err: any) {
     checkError(err);
   }
   return data;
 }
+
+async function handleTransferEvent(
+  from: string,
+  to: string,
+  amount: string,
+  tokenId: number,
+  blockNumber: number,
+  eventIndex: number
+) {
+  let queryCommand: QueryCommandInput = {
+    TableName: TABLES.USER_BALANCE_TABLE,
+    KeyConditionExpression: '#user = :user AND #tokenId = :tokenId',
+    ExpressionAttributeNames: {
+      '#tokenId': 'tokenId',
+      '#user': 'user',
+    },
+    ExpressionAttributeValues: marshall({
+      ':tokenId': tokenId,
+      ':user': from,
+    }),
+  };
+
+  let balanceData = await queryData(queryCommand);
+  let balance = balanceData.Items?.map((item) => {
+    return unmarshall(item);
+  })[0];
+
+  // This is for the sender so we will deduct the amount from his balance
+  if (balance) {
+    // if balance is found then update the balance
+    const newBalance = new BigNumber(balance.balance).sub(amount).toString();
+
+    const updateBalanceData: UpdateItemCommandInput = {
+      TableName: TABLES.USER_BALANCE_TABLE,
+      Key: marshall({
+        user: from,
+        tokenId: tokenId,
+      }),
+      ExpressionAttributeNames: {
+        '#balance': 'balance',
+        ...getBlockAttributeNames(),
+      },
+      ExpressionAttributeValues: marshall({
+        ':balance': newBalance,
+        ':oldBalance': balance.balance,
+        ...getBlockAttributeValues(blockNumber, eventIndex),
+      }),
+      ConditionExpression: `${getEventAndBlockCheckExpression()} AND #balance = :oldBalance`,
+      UpdateExpression: `${setEventAndBlockExxpression()}, #balance = :balance `,
+      ReturnValues: 'UPDATED_NEW',
+    };
+
+    try {
+      await updateData(updateBalanceData);
+    } catch (err: any) {
+      checkError(err);
+    }
+  }
+
+  queryCommand = {
+    TableName: TABLES.USER_BALANCE_TABLE,
+    KeyConditionExpression: '#user = :user AND #tokenId = :tokenId',
+    ExpressionAttributeNames: {
+      '#tokenId': 'tokenId',
+      '#user': 'user',
+    },
+    ExpressionAttributeValues: marshall({
+      ':tokenId': tokenId,
+      ':user': to,
+    }),
+  };
+
+  balanceData = await queryData(queryCommand);
+  balance = balanceData.Items?.map((item) => {
+    return unmarshall(item);
+  })[0];
+
+  // This is for the receiver so we will add the amount to his balance
+  if (balance) {
+    // if balance is found then update the balance
+    const newBalance = new BigNumber(balance.balance).add(amount).toString();
+
+    const updateBalanceData: UpdateItemCommandInput = {
+      TableName: TABLES.USER_BALANCE_TABLE,
+      Key: marshall({
+        user: to,
+        tokenId: tokenId,
+      }),
+      ExpressionAttributeNames: {
+        '#balance': 'balance',
+        ...getBlockAttributeNames(),
+      },
+      ExpressionAttributeValues: marshall({
+        ':balance': newBalance,
+        ':oldBalance': balance.balance,
+        ...getBlockAttributeValues(blockNumber, eventIndex),
+      }),
+      ConditionExpression: `${getEventAndBlockCheckExpression()} AND #balance = :oldBalance`,
+      UpdateExpression: `${setEventAndBlockExxpression()}, #balance = :balance`,
+      ReturnValues: 'UPDATED_NEW',
+    };
+
+    try {
+      await updateData(updateBalanceData);
+    } catch (err: any) {
+      checkError(err);
+    }
+  } else {
+    // if balance is not found then create a new entry as the amount is being credited to receiver's wallet
+    const balanceEntry = {
+      user: to,
+      tokenId: tokenId,
+      balance: new BigNumber(amount).toString(),
+      blockNumber,
+      eventIndex,
+    };
+
+    await putData(TABLES.USER_BALANCE_TABLE, balanceEntry);
+  }
+}
+
 function checkError(err: any) {
   if (
     err.__type ===
@@ -1445,6 +1619,7 @@ function checkError(err: any) {
   await createTokenMintedTable();
   await createOrderCreatedTable();
   await createOrderPurchasedTable();
+  await createUserBalanceTable();
 
   await index();
 })();

@@ -325,3 +325,24 @@ export interface NewVersionRequestResult {
   minTurnOut: boolean;
   newRecordId: number;
 }
+
+export interface Transfer {
+  from: string;
+  to: string;
+  value: string;
+}
+
+export interface TransferSingle {
+  operator: string;
+  from: string;
+  to: string;
+  id: number;
+  value: string;
+}
+export interface TransferBatch {
+  operator: string;
+  from: string;
+  to: string;
+  ids: number[];
+  values: string[];
+}

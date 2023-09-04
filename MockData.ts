@@ -1043,6 +1043,78 @@ const eventData: {
         },
       },
     },
+    // *------*------*-------*
+    // *------*---This flow is for testing the transfer events---*-------*
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'Transfer', // This transfer is for CRD token
+          eventData: JSON.stringify({
+            from: '0x00000000',
+            to: '0xe1F211245B2bE47EC0449aA84a22e1d54708994A',
+            value: '100000000000000000000',
+          }),
+          blockNumber: 10,
+          eventIndex: 1,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'TransferSingle',
+          eventData: JSON.stringify({
+            operator: '0x00000000',
+            from: '0x00000000',
+            to: '0xe1F211245B2bE47EC0449aA84a22e1d54708994A',
+            id: 1, // This token id is for CRD token
+            value: '100000000000000000000',
+          }),
+          blockNumber: 10,
+          eventIndex: 2,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'TransferBatch',
+          eventData: JSON.stringify({
+            operator: '0x00000000',
+            from: '0x00000000',
+            to: '0xe1F211245B2bE47EC0449aA84a22e1d54708994A',
+            ids: [1, 1], // This token id is for CRD token
+            values: ['100000000000000000000', '100000000000000000000'],
+          }),
+          blockNumber: 10,
+          eventIndex: 3,
+        },
+      },
+    },
+    {
+      eventName: 'INSERT',
+      dynamodb: {
+        NewImage: {
+          transactionId: 'trx1',
+          eventName: 'TransferSingle',
+          eventData: JSON.stringify({
+            operator: '0x00000000',
+            from: '0x00000000',
+            to: '0xe1F211245B2bE47EC0449aA84a22e1d54708994A',
+            id: 2,
+            value: '100000000000000000000',
+          }),
+          blockNumber: 10,
+          eventIndex: 4,
+        },
+      },
+    },
   ],
 };
 

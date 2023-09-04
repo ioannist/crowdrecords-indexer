@@ -30,6 +30,7 @@ export const TABLES = {
   TOKEN_MINTED_TABLE: 'TokenMintedTable',
   ORDER_CREATED_TABLE: 'OrderCreatedTable',
   ORDER_PURCHASED_TABLE: 'OrderPurchasedTable',
+  USER_BALANCE_TABLE: 'UserBalanceTable',
 };
 
 export const CONTRIBUTION_STATUS_MAP: { [key: number]: string } = {
