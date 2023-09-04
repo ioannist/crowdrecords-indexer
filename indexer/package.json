@@ -1,0 +1,23 @@
+{
+  "name": "indexer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node indexer.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1412.0",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.6.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-sdk": "^2.7.0",
+    "@types/node": "^20.4.1",
+    "@types/uuid": "^9.0.2"
+  }
+}
