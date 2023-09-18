@@ -1,4 +1,4 @@
-import { DynamoDBStreamEvent } from 'aws-lambda';
+import { AttributeValue, DynamoDBStreamEvent } from 'aws-lambda';
 import {
   DynamoDBClient,
   GetItemCommand,
@@ -81,34 +81,62 @@ import createOrderCreatedTable from './schema/orderCreatedTable';
 import createOrderPurchasedTable from './schema/orderPurchasedTable';
 import createUserBalanceTable from './schema/userBalanceTable';
 
-const ddbClient = new DynamoDBClient({
-  region: 'us-east-2',
-  credentials: {
-    accessKeyId: 'AKIA2JJGHT7ZFAWRCGNF',
-    secretAccessKey: 'lrWnFCvC2O/8eYpEozooM/TcFNwJBpR+ntpjtEDP',
-  },
-}); // replace REGION with your AWS region
+// A helper function to safely get the value from an AttributeValue
+function safeGetValue<T extends keyof AttributeValue>(
+  attr: AttributeValue | undefined,
+  type: T
+): AttributeValue[T] | undefined {
+  if (attr && type in attr) {
+    return attr[type];
+  }
+  return undefined;
+}
 
-// export default async (event: DynamoDBStreamEvent) => {
-//     for (const record of event.Records) {
-//         console.log("Processing record: ", record);
+function convertToDBRecord(
+  item: { [key: string]: AttributeValue } | undefined
+): DBRecord | null {
+  if (!item) {
+    return null;
+  }
 
-//         if (record.eventName === "INSERT") {
-//             await processData(record.dynamodb.NewImage);
-//         }
-//     }
-// };
+  const eventName = safeGetValue(item.eventName, 'S');
+  const eventData = safeGetValue(item.eventData, 'S');
+  const eventIndex = safeGetValue(item.eventIndex, 'N');
+  const blockNumber = safeGetValue(item.blockNumber, 'N');
 
-const index = async () => {
-  // AgreementCreated | RecordCreated | NewTokenCreated
-  const event = eventData;
-  let i = 0;
+  if (!eventName || !eventData || !eventIndex || !blockNumber) {
+    // Some necessary fields are missing, handle this case appropriately
+    return null;
+  }
+
+  return {
+    eventName: eventName,
+    eventData: eventData,
+    eventIndex: parseInt(eventIndex),
+    blockNumber: parseInt(blockNumber),
+  };
+}
+
+export default async (event: DynamoDBStreamEvent) => {
   for (const record of event.Records) {
+    console.log('Processing record: ', record);
+
     if (record.eventName === 'INSERT') {
-      await processData(record.dynamodb.NewImage);
+      const data = convertToDBRecord(record?.dynamodb?.NewImage);
+      if (data) await processData(data);
     }
   }
 };
+
+// const index = async () => {
+//   const event = eventData;
+//   let i = 0;
+//   for (const record of event.Records) {
+//     if (record.eventName === 'INSERT') {
+//       await processData(record.dynamodb.NewImage);
+//     }
+//   }
+// };
 
 const getEventAndBlockCheckExpression = () => {
   return `#block < :newBlock OR (#block = :newBlock AND #eventIndex < :newEventIndex) OR (attribute_not_exists(#block) AND attribute_not_exists(#eventIndex))`;
@@ -1621,5 +1649,6 @@ function checkError(err: any) {
   await createOrderPurchasedTable();
   await createUserBalanceTable();
 
-  await index();
+  // The below function is a mock testing function.
+  // await index();
 })();

@@ -1,5 +1,4 @@
 export interface DBRecord {
-  transactionId: string;
   eventName: string;
   eventData: string;
   eventIndex: number;
