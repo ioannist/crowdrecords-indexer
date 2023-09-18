@@ -61,7 +61,7 @@ const parseAgreementCreated = (eventData: Array<any>): AgreementCreated => {
     tokenId: Number(eventData[5].toString()),
     contractLink: eventData[6],
     contractHash: eventData[7],
-    creationDate: eventData[8],
+    creationDate: Number(eventData[8].toString()),
     isPresent: eventData[9],
     depositAmount: eventData[10].toString(),
     votingEndBlock: Number(eventData[11].toString()),
@@ -118,15 +118,15 @@ const parseContributionCreated = (
 ): ContributionCreated => {
   return {
     contributionId: Number(eventData[0].toString()),
-    tracks: eventData[1],
+    tracks: eventData[1].map((e: any) => Number(e.toString())),
     title: eventData[2],
-    creationDate: eventData[3],
+    creationDate: Number(eventData[3].toString()),
     previewFile: eventData[4],
     previewFileHash: eventData[5],
     recordId: Number(eventData[6].toString()),
     seedContribution: eventData[7],
     roughMix: eventData[8],
-    status: eventData[9],
+    status: Number(eventData[9].toString()),
     description: eventData[10],
     owner: eventData[11],
   };
@@ -164,9 +164,9 @@ const parseDilutionRequestCreated = (
     dilutionId: Number(eventData[2].toString()),
     ballotId: Number(eventData[3].toString()),
     tokenId: Number(eventData[4].toString()),
-    amount: eventData[5],
-    creationDate: eventData[6],
-    depositAmount: eventData[7],
+    amount: eventData[5].toString(),
+    creationDate: Number(eventData[6].toString()),
+    depositAmount: eventData[7].toString(),
     votingEndBlock: Number(eventData[8].toString()),
   };
 };
@@ -195,7 +195,7 @@ const parseBuyOrder = (eventData: Array<any>): BuyOrder => {
     saleId: Number(eventData[0].toString()),
     buyer: eventData[1],
     isLockedInRatio: eventData[2],
-    creationDate: eventData[3],
+    creationDate: Number(eventData[3].toString()),
     communityTokenId: Number(eventData[4].toString()),
     communityTokenAmount: eventData[5].toString(),
     communityTokenCRD: eventData[6].toString(),
@@ -211,7 +211,7 @@ const parseSaleBought = (eventData: Array<any>): SaleBought => {
     saleId: Number(eventData[0].toString()),
     seller: eventData[1],
     buyer: eventData[2],
-    creationDate: eventData[3],
+    creationDate: Number(eventData[3].toString()),
     communityTokenId: Number(eventData[4].toString()),
     communityTokenAmount: eventData[5].toString(),
     communityTokenCRD: eventData[6].toString(),
@@ -226,7 +226,7 @@ const parseSaleBought = (eventData: Array<any>): SaleBought => {
 const parseOrderClose = (eventData: Array<any>): OrderClose => {
   return {
     saleId: Number(eventData[0].toString()),
-    creationDate: eventData[1],
+    creationDate: Number(eventData[1].toString()),
     remainingBalance: eventData[2].toString(),
   };
 };
@@ -240,7 +240,7 @@ const parseRecordCreated = (eventData: Array<any>): RecordCreated => {
     owner: eventData[4],
     parentId: Number(eventData[5].toString()),
     recordCategory: eventData[6],
-    creationDate: eventData[7],
+    creationDate: Number(eventData[7].toString()),
   };
 };
 
@@ -264,7 +264,7 @@ const parseRecordStruct = (eventData: Array<any>): RecordStruct => {
     parentId: Number(eventData[3].toString()),
     owner: eventData[4],
     recordCategory: eventData[5],
-    creationDate: eventData[6],
+    creationDate: Number(eventData[6].toString()),
     isPresent: eventData[7],
   };
 };
@@ -299,7 +299,7 @@ const parseNewVersionVotingBallotCreated = (
     requester: eventData[0],
     versionRequestId: Number(eventData[1].toString()),
     ballotId: Number(eventData[2].toString()),
-    creationDate: eventData[3],
+    creationDate: Number(eventData[3].toString()),
     depositAmount: eventData[4].string(),
     votingEndBlock: Number(eventData[5].string()),
   };
@@ -385,7 +385,7 @@ const parseTokenTransfer = (eventData: Array<any>): TokenTransfer => {
   return {
     from: eventData[0],
     to: eventData[1],
-    transferDate: eventData[2],
+    transferDate: Number(eventData[2].toString()),
     tokenId: Number(eventData[3].toString()),
     amount: eventData[4].toString(),
     symbol: eventData[5],
@@ -397,7 +397,7 @@ const parseNewTokenCreated = (eventData: Array<any>): NewTokenCreated => {
     recordId: Number(eventData[0].toString()),
     symbol: eventData[1],
     image: eventData[2],
-    creationDate: eventData[3],
+    creationDate: Number(eventData[3].toString()),
     tokenAmount: eventData[4].toString(),
     tokenId: Number(eventData[5].toString()),
     tokenType: Number(eventData[6].toString()),
@@ -408,7 +408,7 @@ const parseTokenMinted = (eventData: Array<any>): TokenMinted => {
   return {
     recordId: Number(eventData[0].toString()),
     tokenId: Number(eventData[1].toString()),
-    creationDate: eventData[2],
+    creationDate: Number(eventData[2].toString()),
     tokenAmount: eventData[3].toString(),
   };
 };
@@ -425,7 +425,7 @@ const parseContributionBallotCreated = (
     governanceReward: eventData[5].toString(),
     governanceTokenId: Number(eventData[6].toString()),
     ballotId: Number(eventData[7].toString()),
-    creationDate: eventData[8],
+    creationDate: Number(eventData[8].toString()),
     depositAmount: eventData[9].toString(),
     votingEndBlock: Number(eventData[10].toString()),
   };

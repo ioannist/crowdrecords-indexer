@@ -17,6 +17,7 @@ AWS.config.update({
 
 const docClient = new AWS.DynamoDB.DocumentClient();
 const provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_NODE_URL);
+const caughtUpTimeout = Number(process.env.TIMEOUT_ON_LATEST_BLOCK) ?? 10000;
 
 const startBlock = Number(process.env.START_BLOCK);
 const endBlock = startBlock + 1000;
@@ -97,24 +98,6 @@ async function saveEventToDynamoDB(
     console.error('Error saving event to DynamoDB:', err);
   }
 }
-
-const parseLogs = (contractAddress: String, log: ethers.ethers.Log): any => {
-  return contractsList[
-    contractAddress.toLowerCase() as string
-  ].interface.parseLog(log);
-};
-
-const contractsData = Object.entries(ABI.MAPPING).reduce(
-  (acc, value, index) => {
-    const [k, v] = value;
-    if (ABI.MAPPING[k] && v) {
-      const contract = new ethers.Contract(k, v.abi, provider);
-      return { ...acc, [k]: contract };
-    }
-    return acc;
-  },
-  {}
-);
 
 function getEventTopic(eventName: string, abi: any): string {
   const event = abi.find(
@@ -295,28 +278,49 @@ const saveData = async (data: any) => {
 };
 
 const newBlockScanner = async () => {
-  // let lastScannedBlock = await getLastIndexedBlock();
-  // console.log(
-  //   '🚀 ~ file: indexer.ts:354 ~ newBlockScanner ~ lastScannedBlock:',
-  //   lastScannedBlock
-  // );
+  // Fetch the last processed block
+  let lastProcessedBlock = await getLastIndexedBlock();
 
-  // while (true) {
-  //   const latestBlockNumber = await provider.getBlockNumber();
-  //   if (latestBlockNumber - lastScannedBlock === 0) {
-  //     // sleep for 10 sec
-  //   } else if (latestBlockNumber - lastScannedBlock > 0) {
-  //   }
-  //   if (lastScannedBlock) {
-  //   }
-  //   const eventData = await startScan(lastScannedBlock, 5057806);
-  // }
+  if (!lastProcessedBlock) {
+    throw new Error('lastProcessedBlock is not defined');
+    return;
+  }
 
-  const eventData = await startChainScan(5052434, 5057806);
+  // Set the fromBlock and toBlock
+  let fromBlock = lastProcessedBlock + 1;
+  let toBlock = fromBlock + 99;
 
+  // Get the current block number of the chain
+  let currentBlockNumber = await provider.getBlockNumber();
+
+  // If toBlock is greater than the current block number, set toBlock to the current block number
+  if (toBlock > currentBlockNumber) {
+    toBlock = currentBlockNumber;
+  }
+
+  // Fetch the events from the specified blocks
+  const eventData = await startChainScan(fromBlock, toBlock);
+
+  // Sort the fetched events
   const sortedData = sortEvents(eventData);
 
   await saveData(sortedData);
+
+  await saveLastIndexedBlock(toBlock);
+
+  if (toBlock >= fromBlock) {
+    setTimeout(() => {
+      console.log(`At latest block, taking a break of ${caughtUpTimeout}ms`);
+      newBlockScanner();
+    }, caughtUpTimeout ?? 1000);
+  } else {
+    console.log(
+      '🚀 ~ file: indexer.ts:320 ~ newBlockScanner ~ startBlock and endBlock:',
+      fromBlock,
+      toBlock
+    );
+    newBlockScanner();
+  }
 };
 
 newBlockScanner();
