@@ -275,7 +275,7 @@ const parseVersionRequest = (eventData: Array<any>): VersionRequest => {
     recordData: parseRecordStruct(eventData[1]),
     governanceToken: parseNewVersionTokenStruct(eventData[2]),
     communityToken: parseNewVersionTokenStruct(eventData[3]),
-    contributionIds: eventData[4].map((e) => Number(e.toString())),
+    contributionIds: eventData[4].map((e: any) => Number(e.toString())),
     requester: eventData[5],
     oldVersionId: Number(eventData[6].toString()),
     tokenId: Number(eventData[7].toString()),
@@ -338,7 +338,7 @@ const parseTrackPayload = (eventData: Array<any>): TrackPayload => {
 
 const parseTracksCreated = (eventData: Array<any>): TracksCreated => {
   return {
-    trackIds: eventData[0].map((e) => Number(e.toString())),
+    trackIds: eventData[0].map((e: any) => Number(e.toString())),
     trackData: eventData[1].map(parseTrackPayload),
     owner: eventData[2],
   };
@@ -516,8 +516,8 @@ const parseTransferBatchResult = (eventData: Array<any>): TransferBatch => {
     operator: eventData[0],
     from: eventData[1],
     to: eventData[2],
-    ids: eventData[3].map((e) => Number(e.toString())),
-    values: eventData[4].map((e) => e.toString()),
+    ids: eventData[3].map((e: any) => Number(e.toString())),
+    values: eventData[4].map((e: any) => e.toString()),
   };
 };
 
@@ -608,6 +608,7 @@ export const convertIntoObject = (event: any): any => {
     case 'TransferBatch':
       return parseTransferBatchResult(event.args);
     default:
-      return undefined;
+      throw Error('Event cannot be parsed');
+      return;
   }
 };

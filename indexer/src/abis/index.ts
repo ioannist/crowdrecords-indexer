@@ -16,10 +16,10 @@ import CONTROLLER_ABI from './ControllerContract.json';
 import constants from '../utils/constants';
 
 const ABI = {
-  GLMR_ABI,
+  // GLMR_ABI,
   MAPPING: {
-    '0xc3da629c518404860c8893a66ce3bb2e16bea6ec': GLMR_ABI,
-    [constants.CONTRACT_ADDRESS]: GLMR_ABI,
+    // '0xc3da629c518404860c8893a66ce3bb2e16bea6ec': GLMR_ABI,
+    // [constants.CONTRACT_ADDRESS]: GLMR_ABI,
     [constants.CONTRIBUTION_ADDRESS]: CONTRIBUTION_ABI,
     [constants.RECORD_VOTING_ADDRESS]: RECORDS_VOTING_ABI,
     [constants.RECORDS_ADDRESS]: RECORDS_ABI,
