@@ -19,6 +19,12 @@ const createContributionTable = async () => {
         Projection: { ProjectionType: 'KEYS_ONLY' },
         BillingMode: 'PAY_PER_REQUEST',
       },
+      {
+        IndexName: 'searchByRecordId',
+        KeySchema: [{ AttributeName: 'recordId', KeyType: 'HASH' }],
+        Projection: { ProjectionType: 'KEYS_ONLY' },
+        BillingMode: 'PAY_PER_REQUEST',
+      },
     ],
     BillingMode: 'PAY_PER_REQUEST',
   };

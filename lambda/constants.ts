@@ -31,6 +31,8 @@ export const TABLES = {
   ORDER_CREATED_TABLE: 'OrderCreatedTable',
   ORDER_PURCHASED_TABLE: 'OrderPurchasedTable',
   USER_BALANCE_TABLE: 'UserBalanceTable',
+
+  DRAFTS_TABLE: 'DraftsTable',
 };
 
 export const CONTRIBUTION_STATUS_MAP: { [key: number]: string } = {

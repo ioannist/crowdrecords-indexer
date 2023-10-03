@@ -9,6 +9,7 @@ const createOrderCreatedTable = async () => {
       { AttributeName: 'orderId', AttributeType: 'N' },
       { AttributeName: 'communityTokenId', AttributeType: 'N' },
       { AttributeName: 'governanceTokenId', AttributeType: 'N' },
+      { AttributeName: 'buyer', AttributeType: 'S' },
     ],
     BillingMode: 'PAY_PER_REQUEST',
     GlobalSecondaryIndexes: [
@@ -21,6 +22,12 @@ const createOrderCreatedTable = async () => {
       {
         IndexName: 'searchByGovernanceTokenId',
         KeySchema: [{ AttributeName: 'governanceTokenId', KeyType: 'HASH' }],
+        Projection: { ProjectionType: 'KEYS_ONLY' },
+        BillingMode: 'PAY_PER_REQUEST',
+      },
+      {
+        IndexName: 'searchByBuyer',
+        KeySchema: [{ AttributeName: 'buyer', KeyType: 'HASH' }],
         Projection: { ProjectionType: 'KEYS_ONLY' },
         BillingMode: 'PAY_PER_REQUEST',
       },
